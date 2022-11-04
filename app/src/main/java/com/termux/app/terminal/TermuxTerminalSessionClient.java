@@ -6,6 +6,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Typeface;
 import android.media.AudioAttributes;
 import android.media.SoundPool;
@@ -71,6 +72,10 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
         // The current terminal session may have changed while being away, force
         // a refresh of the displayed terminal.
         mActivity.getTerminalView().onScreenUpdated();
+
+        // Set background image or color. The display orientation may have changed
+        // while being away, force a background update.
+        mActivity.getmTermuxBackgroundManager().updateBackground(true);
     }
 
     /**
@@ -98,12 +103,20 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
         releaseBellSoundPool();
     }
 
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        // Display orientation may have changed, force a background update.
+        mActivity.getmTermuxBackgroundManager().updateBackground(true);
+    }
+
     /**
      * Should be called when mActivity.reloadActivityStyling() is called
      */
     public void onReload() {
         // Set terminal fonts and colors
         checkForFontAndColors();
+
+        // Set background image or color
+        mActivity.getmTermuxBackgroundManager().updateBackground(true);
     }
 
 
@@ -210,7 +223,9 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
     @Override
     public void onColorsChanged(TerminalSession changedSession) {
         if (mActivity.getCurrentSession() == changedSession)
-            updateBackgroundColor();
+            // Background color may have changed. If the background is image and already set,
+            // no need for update.
+            mActivity.getmTermuxBackgroundManager().updateBackground(false);
     }
 
     @Override
@@ -279,7 +294,10 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
         // We call the following even when the session is already being displayed since config may
         // be stale, like current session not selected or scrolled to.
         checkAndScrollToSession(session);
-        updateBackgroundColor();
+
+        // Background color may have changed. If the background is image and already set,
+        // no need for update.
+        mActivity.getmTermuxBackgroundManager().updateBackground(false);
     }
 
     void notifyOfSessionChange() {
@@ -475,20 +493,11 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
             if (session != null && session.getEmulator() != null) {
                 session.getEmulator().mColors.reset();
             }
-            updateBackgroundColor();
 
             final Typeface newTypeface = (fontFile.exists() && fontFile.length() > 0) ? Typeface.createFromFile(fontFile) : Typeface.MONOSPACE;
             mActivity.getTerminalView().setTypeface(newTypeface);
         } catch (Exception e) {
             Logger.logStackTraceWithMessage(LOG_TAG, "Error in checkForFontAndColors()", e);
-        }
-    }
-
-    public void updateBackgroundColor() {
-        if (!mActivity.isVisible()) return;
-        TerminalSession session = mActivity.getCurrentSession();
-        if (session != null && session.getEmulator() != null) {
-            mActivity.getWindow().getDecorView().setBackgroundColor(session.getEmulator().mColors.mCurrentColors[TextStyle.COLOR_INDEX_BACKGROUND]);
         }
     }
 

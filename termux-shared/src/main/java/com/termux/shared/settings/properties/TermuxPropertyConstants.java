@@ -322,6 +322,12 @@ public final class TermuxPropertyConstants {
 
 
 
+    /** Defines the key for background overlay color */
+    public static final String KEY_BACKGROUND_OVERLAY_COLOR = "background-overlay-color"; // Default: "background-overlay-color
+    public static final int DEFAULT_IVALUE_BACKGROUND_OVERLAY_COLOR = 0x59000000;
+
+
+
 
 
     /** Defines the set for keys loaded by termux
@@ -364,7 +370,8 @@ public final class TermuxPropertyConstants {
         KEY_EXTRA_KEYS,
         KEY_EXTRA_KEYS_STYLE,
         KEY_SOFT_KEYBOARD_TOGGLE_BEHAVIOUR,
-        KEY_VOLUME_KEYS_BEHAVIOUR
+        KEY_VOLUME_KEYS_BEHAVIOUR,
+        KEY_BACKGROUND_OVERLAY_COLOR
         ));
 
     /** Defines the set for keys loaded by termux that have default boolean behaviour with false as default.

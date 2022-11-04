@@ -216,8 +216,30 @@ public class TermuxAppSharedPreferences {
 
 
 
+    public boolean isBackgroundImageEnabled() {
+        return SharedPreferenceUtils.getBoolean(
+            mSharedPreferences,
+            TERMUX_APP.KEY_BACKGROUND_IMAGE_ENABLED,
+            TERMUX_APP.DEFAULT_VALUE_BACKGROUND_IMAGE_ENABLED
+        );
+    }
+
+    public void setBackgroundImageEnabled(boolean value) {
+        SharedPreferenceUtils.setBoolean(
+            mSharedPreferences,
+            TERMUX_APP.KEY_BACKGROUND_IMAGE_ENABLED,
+            value,
+            false
+        );
+    }
+
+
     public boolean arePluginErrorNotificationsEnabled() {
-        return SharedPreferenceUtils.getBoolean(mSharedPreferences, TERMUX_APP.KEY_PLUGIN_ERROR_NOTIFICATIONS_ENABLED, TERMUX_APP.DEFAULT_VALUE_PLUGIN_ERROR_NOTIFICATIONS_ENABLED);
+        return SharedPreferenceUtils.getBoolean(
+            mSharedPreferences,
+            TERMUX_APP.KEY_PLUGIN_ERROR_NOTIFICATIONS_ENABLED,
+            TERMUX_APP.DEFAULT_VALUE_PLUGIN_ERROR_NOTIFICATIONS_ENABLED
+        );
     }
 
     public void setPluginErrorNotificationsEnabled(boolean value) {

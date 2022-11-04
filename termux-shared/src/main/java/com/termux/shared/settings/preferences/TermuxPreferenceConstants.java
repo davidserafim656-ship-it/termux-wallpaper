@@ -162,6 +162,12 @@ public final class TermuxPreferenceConstants {
         public static final String KEY_CRASH_REPORT_NOTIFICATIONS_ENABLED = "crash_report_notifications_enabled";
         public static final boolean DEFAULT_VALUE_CRASH_REPORT_NOTIFICATIONS_ENABLED = true;
 
+        /**
+         * Defines the key for whether background image is enabled or not.
+         */
+        public static final String KEY_BACKGROUND_IMAGE_ENABLED = "background_image_enabled";
+        public static final boolean DEFAULT_VALUE_BACKGROUND_IMAGE_ENABLED = false;
+
     }
 
 
