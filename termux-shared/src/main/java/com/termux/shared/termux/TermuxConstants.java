@@ -631,16 +631,30 @@ public final class TermuxConstants {
 
 
 
-    /** Termux portrait background image path. */
+    /** Directory that stores Termux background images. */
+    public static final String TERMUX_BACKGROUND_DIR_PATH =
+        TERMUX_DATA_HOME_DIR_PATH + "/background";
+
+    public static final File TERMUX_BACKGROUND_DIR =
+        new File(TERMUX_BACKGROUND_DIR_PATH);
+
+    /** Original compressed background image. */
     public static final String TERMUX_BACKGROUND_IMAGE_PATH =
-        TERMUX_DATA_HOME_DIR_PATH + "/background.jpeg";
+        TERMUX_BACKGROUND_DIR_PATH + "/background.jpeg";
 
     public static final File TERMUX_BACKGROUND_IMAGE_FILE =
         new File(TERMUX_BACKGROUND_IMAGE_PATH);
 
-    /** Termux landscape background image path. */
+    /** Portrait background image. */
+    public static final String TERMUX_BACKGROUND_IMAGE_PORTRAIT_PATH =
+        TERMUX_BACKGROUND_DIR_PATH + "/background_portrait.jpeg";
+
+    public static final File TERMUX_BACKGROUND_IMAGE_PORTRAIT_FILE =
+        new File(TERMUX_BACKGROUND_IMAGE_PORTRAIT_PATH);
+
+    /** Landscape background image. */
     public static final String TERMUX_BACKGROUND_IMAGE_LANDSCAPE_PATH =
-        TERMUX_DATA_HOME_DIR_PATH + "/background_landscape.jpeg";
+        TERMUX_BACKGROUND_DIR_PATH + "/background_landscape.jpeg";
 
     public static final File TERMUX_BACKGROUND_IMAGE_LANDSCAPE_FILE =
         new File(TERMUX_BACKGROUND_IMAGE_LANDSCAPE_PATH);
