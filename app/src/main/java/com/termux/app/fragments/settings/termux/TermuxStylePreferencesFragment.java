@@ -12,7 +12,7 @@ import androidx.preference.SwitchPreferenceCompat;
 
 import com.termux.R;
 import com.termux.app.style.TermuxBackgroundManager;
-import com.termux.shared.termux.settings.preferences.TermuxAppSharedPreferences;
+import com.termux.shared.settings.preferences.TermuxAppSharedPreferences;
 
 @Keep
 public class TermuxStylePreferencesFragment extends PreferenceFragmentCompat {
