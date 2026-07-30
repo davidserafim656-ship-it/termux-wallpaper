@@ -18,9 +18,9 @@ import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
 
-import com.termux.shared.errors.Error;
+import com.termux.shared.models.errors.Error;
 import com.termux.shared.file.FileUtils;
-import com.termux.shared.file.FileUtilsErrno;
+import com.termux.shared.models.errors.FileUtilsErrno;
 import com.termux.shared.logger.Logger;
 
 import java.io.File;
