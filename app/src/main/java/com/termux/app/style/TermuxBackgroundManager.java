@@ -13,20 +13,19 @@ import android.os.Handler;
 import android.os.Looper;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
+import android.app.AlertDialog;
 import androidx.viewpager.widget.ViewPager;
 
 import com.termux.R;
 import com.termux.app.TermuxActivity;
 import com.termux.shared.data.DataUtils;
-import com.termux.shared.errors.Error;
+import com.termux.shared.models.errors.Error;
 import com.termux.shared.file.FileUtils;
 import com.termux.shared.image.ImageUtils;
 import com.termux.shared.logger.Logger;
 import com.termux.shared.termux.TermuxConstants;
-import com.termux.shared.termux.extrakeys.ExtraKeysView;
-import com.termux.shared.termux.settings.preferences.TermuxAppSharedPreferences;
-import com.termux.shared.theme.ThemeUtils;
+import com.termux.shared.terminal.io.extrakeys.ExtraKeysView;
+import com.termux.shared.settings.preferences.TermuxAppSharedPreferences;
 import com.termux.shared.view.ViewUtils;
 import com.termux.terminal.TerminalSession;
 import com.termux.terminal.TextStyle;
@@ -36,19 +35,100 @@ import java.util.concurrent.Executors;
 
 public class TermuxBackgroundManager {
 
-    /** Open Android image picker for a new terminal background. */
+    /** Require {@link TermuxActivity} to perform operations. */
+    private final TermuxActivity mActivity;
+
+    /** Termux app shared preferences manager. */
+    private final TermuxAppSharedPreferences mPreferences;
+
+    /** ExecutorService to execute task in background. */
+    private final ExecutorService executor;
+
+    /** Handler allows to send and process {@link  android.os.Message Message}. */
+    private final Handler handler;
+
+
+    private static final String LOG_TAG = "TermuxBackgroundManager";
+    public static final int REQUEST_PICK_BACKGROUND_IMAGE = 43071;
+
+    public TermuxBackgroundManager(TermuxActivity activity) {
+        this.mActivity = activity;
+        this.mPreferences = activity.getPreferences();
+        this.executor = Executors.newSingleThreadExecutor();
+        this.handler = new Handler(Looper.getMainLooper());
+    }
+
+    /**
+     * Check whether the optimized background image for {@link Configuration#ORIENTATION_PORTRAIT
+     * Portrait} and {@link Configuration#ORIENTATION_LANDSCAPE Landscape} display view exist.
+     *
+     * @param context The context for operation.
+     * @return Returns whether the optimized background image exist or not.
+     */
+    public static boolean isImageFilesExist(@NonNull Context context, boolean shouldGenerate) {
+        boolean isLandscape = (ViewUtils.getDisplayOrientation(context) == Configuration.ORIENTATION_LANDSCAPE);
+        Point size = ViewUtils.getDisplaySize(context, true);
+
+        String imagePath1 = isLandscape ? TermuxConstants.TERMUX_BACKGROUND_IMAGE_LANDSCAPE_PATH : TermuxConstants.TERMUX_BACKGROUND_IMAGE_PORTRAIT_PATH;
+
+        String imagePath2 = isLandscape ? TermuxConstants.TERMUX_BACKGROUND_IMAGE_PORTRAIT_PATH : TermuxConstants.TERMUX_BACKGROUND_IMAGE_LANDSCAPE_PATH;
+
+        boolean exist = ImageUtils.isImageOptimized(imagePath1, size)
+            && ImageUtils.isImageOptimized(imagePath2, DataUtils.swap(size));
+
+        if (!exist && shouldGenerate && ImageUtils.isImage(TermuxConstants.TERMUX_BACKGROUND_IMAGE_PATH)) {
+            Bitmap bitmap = ImageUtils.getBitmap(TermuxConstants.TERMUX_BACKGROUND_IMAGE_PATH);
+            return generateImageFiles(context, bitmap);
+        }
+
+        return exist;
+    }
+
+
+
+    /**
+     * Enable background image loading. If the image already exist then ask for restore otherwise pick from gallery.
+     */
+    public void setBackgroundImage() {
+        if (!mPreferences.isBackgroundImageEnabled() && isImageFilesExist(mActivity, true)) {
+            restoreBackgroundImages();
+
+        } else {
+            pickImageFromGallery();
+        }
+    }
+
+    /**
+     * Disable background image loading and notify about the changes.
+     * If image files are not deleted then it can be used to restore
+     * when resetting background to image.
+     *
+     * @param deleteFiles The {@code boolean} that decides if it should delete the image files.
+     */
+    public void removeBackgroundImage(boolean deleteFiles) {
+        if (deleteFiles) {
+            FileUtils.deleteDirectoryFile(null, TermuxConstants.TERMUX_BACKGROUND_DIR_PATH, true);
+        }
+
+        notifyBackgroundUpdated(false);
+    }
+
+    /** Open Android image picker to select a terminal background. */
     private void pickImageFromGallery() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType(ImageUtils.ANY_IMAGE_TYPE);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
 
         mActivity.startActivityForResult(
-            Intent.createChooser(intent, mActivity.getString(R.string.action_set_background_image)),
+            Intent.createChooser(
+                intent,
+                mActivity.getString(R.string.action_set_background_image)
+            ),
             REQUEST_PICK_BACKGROUND_IMAGE
         );
     }
 
-    /** Handle the image selected by Android's picker. */
+    /** Handle the image selected by Android. */
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode != REQUEST_PICK_BACKGROUND_IMAGE ||
             resultCode != Activity.RESULT_OK ||
@@ -59,8 +139,8 @@ public class TermuxBackgroundManager {
         Uri uri = data.getData();
         if (uri == null) return;
 
-        try {
-            executor.execute(() -> {
+        executor.execute(() -> {
+            try {
                 Bitmap bitmap = ImageUtils.getBitmap(mActivity, uri);
 
                 if (bitmap == null) {
@@ -74,14 +154,23 @@ public class TermuxBackgroundManager {
                     return;
                 }
 
-                ImageUtils.compressAndSaveBitmap(
+                Error error = ImageUtils.compressAndSaveBitmap(
                     bitmap,
                     TermuxConstants.TERMUX_BACKGROUND_IMAGE_PATH
                 );
 
-                boolean success = generateImageFiles(mActivity, bitmap);
+                if (error != null) {
+                    Logger.logErrorAndShowToast(
+                        mActivity,
+                        LOG_TAG,
+                        mActivity.getString(
+                            R.string.error_background_image_loading_from_gallery_failed
+                        )
+                    );
+                    return;
+                }
 
-                if (success) {
+                if (generateImageFiles(mActivity, bitmap)) {
                     notifyBackgroundUpdated(true);
                     Logger.logInfo(LOG_TAG, "Background image loaded successfully.");
                 } else {
@@ -93,17 +182,14 @@ public class TermuxBackgroundManager {
                         )
                     );
                 }
-            });
-        } catch (Exception e) {
-            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to load image", e);
-            Logger.showToast(
-                mActivity,
-                mActivity.getString(
-                    R.string.error_background_image_loading_from_gallery_failed
-                ),
-                true
-            );
-        }
+            } catch (Exception e) {
+                Logger.logStackTraceWithMessage(
+                    LOG_TAG,
+                    "Failed to load background image",
+                    e
+                );
+            }
+        });
     }
 
     /**
@@ -250,7 +336,7 @@ public class TermuxBackgroundManager {
         } else {
             // Use default background color of ToolbarViewPager and button.
             viewPager.setBackgroundColor(Color.BLACK);
-            extraKeysView.setButtonBackgroundColor(ThemeUtils.getSystemAttrColor(mActivity, ExtraKeysView.ATTR_BUTTON_BACKGROUND_COLOR, ExtraKeysView.DEFAULT_BUTTON_BACKGROUND_COLOR));
+            extraKeysView.setButtonBackgroundColor(ExtraKeysView.DEFAULT_BUTTON_BACKGROUND_COLOR);
         }
     }
 
@@ -263,7 +349,7 @@ public class TermuxBackgroundManager {
      */
     public void notifyBackgroundUpdated(boolean isImage) {
         mPreferences.setBackgroundImageEnabled(isImage);
-        TermuxActivity.updateTermuxActivityStyling(mActivity, false);
+        TermuxActivity.updateTermuxActivityStyling(mActivity);
     }
 
 }
